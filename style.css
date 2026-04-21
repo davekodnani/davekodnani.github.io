@@ -1,0 +1,254 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Lora", "Georgia", "Times New Roman", serif;
+    background-color: #f5f0e8;
+    color: #2c2c2c;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+a {
+    color: #2c2c2c;
+    text-decoration: none;
+    border-bottom: 1px solid #999;
+}
+
+a:hover {
+    border-bottom-color: #2c2c2c;
+}
+
+/* Navigation */
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 2rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 0.9rem;
+}
+
+nav > a {
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    border-bottom: none;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    border-bottom: none;
+    color: #666;
+}
+
+.nav-links a:hover {
+    color: #2c2c2c;
+}
+
+/* Home */
+main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 3rem 4rem;
+}
+
+.home-content {
+    display: flex;
+    gap: 3rem;
+    align-items: flex-start;
+    margin-top: 2rem;
+}
+
+.portrait {
+    width: 324px;
+    height: 432px;
+    border-radius: 0;
+    object-fit: cover;
+    flex-shrink: 0;
+    filter: grayscale(20%);
+}
+
+.intro h1 {
+    font-size: 1.4rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.intro p {
+    margin-bottom: 0.8rem;
+    color: #444;
+}
+
+.intro a {
+    color: #444;
+}
+
+.contact {
+    margin-top: 3rem;
+    display: flex;
+    gap: 1.2rem;
+}
+
+.contact a {
+    color: #999;
+    border-bottom: none;
+    display: flex;
+}
+
+.contact a:hover {
+    color: #2c2c2c;
+}
+
+/* Page titles */
+.page-title {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 2.5rem;
+    margin-top: 1rem;
+}
+
+/* Research */
+.paper {
+    margin-bottom: 2.5rem;
+}
+
+.paper h3 {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+}
+
+.paper .authors {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 0.3rem;
+}
+
+.paper .venue {
+    font-size: 0.85rem;
+    color: #888;
+    font-style: italic;
+    margin-bottom: 0.4rem;
+}
+
+.paper .links {
+    font-size: 0.85rem;
+}
+
+.paper .links a {
+    color: #666;
+    margin-right: 1rem;
+    border-bottom: 1px solid #ccc;
+}
+
+.paper .links a:hover {
+    color: #2c2c2c;
+    border-bottom-color: #2c2c2c;
+}
+
+.section-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #999;
+    margin-bottom: 1.5rem;
+    margin-top: 2rem;
+}
+
+/* Photos */
+.photos-grid {
+    margin-top: 1rem;
+}
+
+.photo-item {
+    margin-bottom: 3rem;
+}
+
+.photo-item img {
+    width: 100%;
+    display: block;
+    filter: grayscale(10%);
+}
+
+.photo-item.half {
+    width: 65%;
+}
+
+.photo-item.small {
+    width: 45%;
+}
+
+.photo-caption {
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 0.5rem;
+}
+
+/* CV */
+.cv-section {
+    margin-bottom: 2.5rem;
+}
+
+.cv-section h2 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #999;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.4rem;
+}
+
+.cv-entry {
+    margin-bottom: 1.2rem;
+}
+
+.cv-entry .title {
+    font-weight: 500;
+}
+
+.cv-entry .detail {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.cv-entry .year {
+    color: #999;
+    font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    nav {
+        padding: 1.5rem;
+    }
+
+    main {
+        padding: 1.5rem 1.5rem 3rem;
+    }
+
+    .home-content {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .portrait {
+        width: 252px;
+        height: 336px;
+    }
+
+    .photo-item.half,
+    .photo-item.small {
+        width: 100%;
+    }
+}
