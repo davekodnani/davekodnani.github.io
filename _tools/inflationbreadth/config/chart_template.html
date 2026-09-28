@@ -114,10 +114,10 @@ th:first-child, td:first-child { text-align: left; }
       </div>
     </div>
     <div class="ctl">
-      <span class="lbl">Share of</span>
+      <span class="lbl">Weighting</span>
       <div class="seg" id="wt">
-        <button data-v="u" aria-pressed="true" title="Each of the 177 categories counts equally">Categories</button>
-        <button data-v="w" aria-pressed="false" title="Categories weighted by their share of consumer spending">Spending</button>
+        <button data-v="u" aria-pressed="true" title="Each of the 177 categories counts equally">Unweighted</button>
+        <button data-v="w" aria-pressed="false" title="Same price test; categories weighted by their share of consumer spending">Spending-weighted</button>
         <button data-v="b" aria-pressed="false">Both</button>
       </div>
     </div>
@@ -193,8 +193,8 @@ function mean(s, a, b) {
 
 function series() {
   const out = [];
-  if (state.wt !== "w") out.push({ key: "u", name: "Share of categories", cls: "cat", s: breadth(state.h, state.thr, false) });
-  if (state.wt !== "u") out.push({ key: "w", name: "Share of spending", cls: "spend", s: breadth(state.h, state.thr, true) });
+  if (state.wt !== "w") out.push({ key: "u", name: "Unweighted", cls: "cat", s: breadth(state.h, state.thr, false) });
+  if (state.wt !== "u") out.push({ key: "w", name: "Spending-weighted", cls: "spend", s: breadth(state.h, state.thr, true) });
   return out;
 }
 
@@ -228,8 +228,8 @@ function countAbove(t) {
 }
 
 const DEF = {
-  u: "each of the 177 categories counts equally, so the share is simply how many categories are at or above the threshold",
-  w: "each category counts by its share of consumer spending, so big-budget items like housing and health care matter far more than small ones like watches or toys",
+  u: "each of the 177 categories counts equally, so the share is simply how many categories have price increases at or above the threshold",
+  w: "the same price test, but each category counts by its share of consumer spending, so big-budget items like housing and health care matter far more than small ones like watches or toys",
 };
 function hzPhrase() { return state.h === 12 ? "over the past 12 months" : `over the past ${state.h} months (annualized)`; }
 
@@ -241,18 +241,21 @@ function explain(S, last) {
   const v = k => S.find(x => x.key === k).s[last];
   if (state.wt !== "w") {
     const [n, k] = countAbove(last);
-    para("Share of categories: ", `${DEF.u}. In ${when}, ${n} of ${k} categories (${v("u").toFixed(0)}%) had prices up ${state.thr}% or more ${hzPhrase()}.`);
+    para("Unweighted: ", `${DEF.u}. In ${when}, ${n} of ${k} categories (${v("u").toFixed(0)}%) had prices up ${state.thr}% or more ${hzPhrase()}.`);
   }
   if (state.wt !== "u") {
-    para("Share of spending: ", `${DEF.w}. In ${when}, categories making up ${v("w").toFixed(0)}% of consumer spending had prices up ${state.thr}% or more ${hzPhrase()}.`);
+    para("Spending-weighted: ", `${DEF.w}. In ${when}, categories accounting for ${v("w").toFixed(0)}% of consumer spending had prices up ${state.thr}% or more ${hzPhrase()}.`);
+  }
+  if (state.wt !== "u") {
+    para("Note: ", "both measures count price increases, not spending growth. Spending only sets how much each category counts.");
   }
   if (state.wt === "b") {
     const gap = v("w") - v("u");
     para("Reading the gap: ", Math.abs(gap) < 3
       ? "the two lines are close, so above-threshold inflation is spread about evenly across big and small categories."
       : gap > 0
-        ? "spending is above categories, so above-threshold inflation is concentrated in the large categories that make up more of household budgets."
-        : "spending is below categories, so above-threshold inflation is mostly in smaller categories while big-budget items are running cooler.");
+        ? "the spending-weighted share is above the unweighted share, so above-threshold inflation is concentrated in the large categories that make up more of household budgets."
+        : "the spending-weighted share is below the unweighted share, so above-threshold inflation is mostly in smaller categories while big-budget items are running cooler.");
   }
 }
 
@@ -263,8 +266,8 @@ function render(opts = {}) {
   const idx = []; for (let t = i0; t < T; t++) if (S.some(x => !Number.isNaN(x.s[t]))) idx.push(t);
   current = { S, idx };
 
-  const subj = state.wt === "u" ? "PCE categories" : state.wt === "w" ? "PCE spending" : "PCE";
-  $("title").textContent = `Share of ${subj} with ${hzText()} price increases at or above ${state.thr} percent`;
+  $("title").textContent = `Share of PCE categories with ${hzText()} price increases at or above ${state.thr} percent` +
+    (state.wt === "w" ? ", weighted by spending" : "");
   $("sub").textContent = `177 detailed PCE categories · data through ${LONGM[+D.latest.slice(5) - 1]} ${D.latest.slice(0, 4)}`;
 
   // Stat row: latest value per series with change vs prior month.
@@ -386,7 +389,7 @@ function render(opts = {}) {
   { const sp = document.createElement("span"); const i = document.createElement("i");
     i.style.borderTop = "1.5px dashed var(--ink-2)"; sp.append(i, document.createTextNode(`${a0.slice(0,4)}–${a1.slice(0,4)} average`)); lg.appendChild(sp); }
   $("note").textContent = `Source: BEA Tables 2.4.4U and 2.4.5U; calculations from the 177 detailed PCE categories used in the Dallas Fed trimmed mean. ` +
-    `"Share of spending" weights each category by its current-month nominal expenditure. Built ${D.fetched.replace("T", " ")}.`;
+    `Spending-weighted: the same price-increase test, with each category weighted by its current-month nominal expenditure. Built ${D.fetched.replace("T", " ")}.`;
 
   // Table (newest first).
   const tb = $("tbl"); tb.replaceChildren();
@@ -462,9 +465,9 @@ async function downloadPNG() {
   const S = current.S, month = D.latest;
   const title = $("title").textContent;
   const def = "Note: " + ({
-    u: "Share of categories counts each of the 177 detailed PCE categories equally.",
-    w: "Share of spending weights each of the 177 detailed PCE categories by its share of consumer spending.",
-    b: "Share of categories counts each of the 177 detailed PCE categories equally; share of spending weights each by its share of consumer spending.",
+    u: "Unweighted; each of the 177 detailed PCE categories counts equally.",
+    w: "Measures price increases, not spending growth; each of the 177 detailed PCE categories is weighted by its share of consumer spending.",
+    b: "Both lines measure price increases, not spending growth. Unweighted counts each of the 177 detailed PCE categories equally; spending-weighted counts each by its share of consumer spending.",
   })[state.wt];
   const src = `Source: U.S. Bureau of Economic Analysis, PCE price indexes and spending by type of product (Tables 2.4.4U and 2.4.5U); ` +
               `calculations over the 177 detailed PCE categories used in the Dallas Fed trimmed mean. Data through ${LONGM[+month.slice(5) - 1]} ${month.slice(0, 4)}.`;
