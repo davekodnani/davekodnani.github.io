@@ -380,12 +380,10 @@ function render(opts = {}) {
     if (e.key === "ArrowRight") { show(focusIdx + 1); e.preventDefault(); }
   });
 
-  // Legend (always present) + footnote.
+  // Legend only when two lines share the plot; averages are labeled on the chart.
   const lg = $("legend"); lg.replaceChildren();
-  S.forEach(s => { const sp = document.createElement("span"); const i = document.createElement("i");
+  if (S.length > 1) S.forEach(s => { const sp = document.createElement("span"); const i = document.createElement("i");
     i.style.borderColor = `var(--${s.cls})`; sp.append(i, document.createTextNode(s.name)); lg.appendChild(sp); });
-  { const sp = document.createElement("span"); const i = document.createElement("i");
-    i.style.borderTop = "1.5px dashed var(--ink-2)"; sp.append(i, document.createTextNode(`${a0.slice(0,4)}–${a1.slice(0,4)} average`)); lg.appendChild(sp); }
   $("note").textContent = `Source: BEA Tables 2.4.4U and 2.4.5U; calculations from the 177 detailed PCE categories used in the Dallas Fed trimmed mean. ` +
     `Spending-weighted: the same price-increase test, with each category weighted by its current-month nominal expenditure. Built ${D.fetched.replace("T", " ")}.`;
 
@@ -482,17 +480,15 @@ async function downloadPNG() {
   const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   let y = PAD + 26, parts = [];
   tL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="26" fill="${col.ink}">${esc(l)}</text>`); y += 33; });
-  // Legend sits just under the title, above the plot.
-  y += 4;
+  // Legend (two-line view only) sits just under the title, above the plot.
   let lx = PAD;
   const key = (color, dash, label) => {
     parts.push(`<line x1="${lx}" x2="${lx + 22}" y1="${y - 5}" y2="${y - 5}" stroke="${color}" stroke-width="${dash ? 1.5 : 3}"${dash ? ' stroke-dasharray="5 3"' : ""}/>`);
     parts.push(`<text x="${lx + 30}" y="${y}" font-size="14" fill="${col["ink-2"]}">${esc(label)}</text>`);
     lx += 30 + textWidth(label, 14) + 28;
   };
-  S.forEach(s => key(col[s.cls], false, s.name));
-  key(col["ink-2"], true, `${D.avgWindow[0].slice(0, 4)}–${D.avgWindow[1].slice(0, 4)} average`);
-  y += 8;
+  if (S.length > 1) { y += 4; S.forEach(s => key(col[s.cls], false, s.name)); y += 8; }
+  else y -= 12;
   const chartY = y;
   y += vbH + 26;
   dL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="13" fill="${col["ink-2"]}">${esc(l)}</text>`); y += 18; });
