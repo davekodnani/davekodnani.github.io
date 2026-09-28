@@ -11,7 +11,7 @@ FONTS = ROOT / "config" / "fonts"
 TEMPLATE = ROOT / "config" / "chart_template.html"
 
 NAVY = "#1f4e79"
-GRAY = "#a6a6a6"
+GRAY = "#666666"
 INK = "#3a3a3a"
 GRID = "#b8b8b8"
 
