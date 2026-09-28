@@ -49,7 +49,7 @@ def _plot(s, avg, title, meta, path):
     fig.subplots_adjust(left=0.085, right=0.905, top=0.87, bottom=0.12)
     fig.text(0.02, 0.955, title, fontsize=15.5 if len(title) < 75 else 13.5, color=INK, va="top")
 
-    top = max(80, 20 * -(-s.max() // 20))
+    top = 80 if s.max() <= 84 else 20 * -(-s.max() // 20)
     ax.set_ylim(0, top + 5)
     ticks = list(range(0, int(top) + 1, 20))
     ax.set_yticks(ticks)

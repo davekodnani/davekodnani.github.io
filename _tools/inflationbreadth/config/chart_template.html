@@ -84,6 +84,12 @@ th:first-child, td:first-child { text-align: left; }
 .btn { font: inherit; font-size: 13px; border: 1px solid var(--rule); background: transparent; color: var(--ink);
   border-radius: 8px; padding: 5px 10px; cursor: pointer; }
 .tbl-wrap { max-height: 360px; overflow: auto; }
+.explain { background: var(--panel); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+  padding: 10px 14px; margin: 0 0 16px; font-size: 14px; color: var(--ink-2); }
+.explain p { margin: 0; }
+.explain p + p { margin-top: 6px; }
+.explain b { color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
@@ -110,8 +116,8 @@ th:first-child, td:first-child { text-align: left; }
     <div class="ctl">
       <span class="lbl">Share of</span>
       <div class="seg" id="wt">
-        <button data-v="u" aria-pressed="true">Categories</button>
-        <button data-v="w" aria-pressed="false">Spending</button>
+        <button data-v="u" aria-pressed="true" title="Each of the 177 categories counts equally">Categories</button>
+        <button data-v="w" aria-pressed="false" title="Categories weighted by their share of consumer spending">Spending</button>
         <button data-v="b" aria-pressed="false">Both</button>
       </div>
     </div>
@@ -119,7 +125,11 @@ th:first-child, td:first-child { text-align: left; }
       <label for="start">Start</label>
       <select id="start"></select>
     </div>
+    <div class="ctl">
+      <button class="btn" id="png">Download PNG</button>
+    </div>
   </div>
+  <div class="explain" id="explain"></div>
 
   <div class="stats" id="stats"></div>
   <div class="chart" id="chart"><svg id="svg" role="img" aria-labelledby="title"></svg><div class="tip" id="tip"></div></div>
@@ -211,7 +221,42 @@ function readHash() {
   if (/^\d{4}$/.test(p.get("s") || "")) state.start = p.get("s");
 }
 
-function render() {
+function countAbove(t) {
+  const G = growth(state.h); let n = 0, k = 0;
+  for (let i = 0; i < N; i++) { const g = G[i][t]; if (Number.isNaN(g)) continue; k++; if (g >= state.thr) n++; }
+  return [n, k];
+}
+
+const DEF = {
+  u: "each of the 177 categories counts equally, so the share is simply how many categories are at or above the threshold",
+  w: "each category counts by its share of consumer spending, so big-budget items like housing and health care matter far more than small ones like watches or toys",
+};
+function hzPhrase() { return state.h === 12 ? "over the past 12 months" : `over the past ${state.h} months (annualized)`; }
+
+function explain(S, last) {
+  const box = $("explain"); box.replaceChildren();
+  const when = fmtDate(D.dates[last]);
+  const para = (label, rest) => { const p = document.createElement("p"); const b = document.createElement("b");
+    b.textContent = label; p.append(b, document.createTextNode(rest)); box.appendChild(p); };
+  const v = k => S.find(x => x.key === k).s[last];
+  if (state.wt !== "w") {
+    const [n, k] = countAbove(last);
+    para("Share of categories: ", `${DEF.u}. In ${when}, ${n} of ${k} categories (${v("u").toFixed(0)}%) had prices up ${state.thr}% or more ${hzPhrase()}.`);
+  }
+  if (state.wt !== "u") {
+    para("Share of spending: ", `${DEF.w}. In ${when}, categories making up ${v("w").toFixed(0)}% of consumer spending had prices up ${state.thr}% or more ${hzPhrase()}.`);
+  }
+  if (state.wt === "b") {
+    const gap = v("w") - v("u");
+    para("Reading the gap: ", Math.abs(gap) < 3
+      ? "the two lines are close, so above-threshold inflation is spread about evenly across big and small categories."
+      : gap > 0
+        ? "spending is above categories, so above-threshold inflation is concentrated in the large categories that make up more of household budgets."
+        : "spending is below categories, so above-threshold inflation is mostly in smaller categories while big-budget items are running cooler.");
+  }
+}
+
+function render(opts = {}) {
   writeHash();
   const S = series();
   const i0 = Math.max(D.dates.findIndex(d => d >= state.start + "-01"), 0);
@@ -234,7 +279,8 @@ function render() {
     d.append(v, t); st.appendChild(d);
   }
 
-  const W = Math.round(Math.min(940, Math.max(340, $("chart").clientWidth || 940)));
+  explain(S, idx[idx.length - 1]);
+  const W = opts.width || Math.round(Math.min(940, Math.max(340, $("chart").clientWidth || 940)));
   const narrow = W < 600, H = narrow ? Math.round(W * 0.78) : 520;
   const m = { l: 40, r: narrow ? 64 : 118, t: 16, b: 34 };
   const svg = $("svg"); svg.replaceChildren(); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -246,7 +292,7 @@ function render() {
   const tnum = s => +s.slice(0, 4) + (+s.slice(5) - 1) / 12;
   const x = v => m.l + (v - xa) / (xb - xa) * iw;
   let vmax = 0; for (const s of S) for (const t of idx) if (s.s[t] > vmax) vmax = s.s[t];
-  const top = Math.max(80, Math.ceil(vmax / 20) * 20);
+  const top = vmax <= 84 ? 80 : Math.ceil(vmax / 20) * 20;  // plot runs to top + 4
   const y = v => m.t + ih - v / (top + 4) * ih;
 
   const ax = el("g", { class: "axis" }, svg);
@@ -352,6 +398,126 @@ function render() {
   }
 }
 
+// ---- PNG export: redraw at a fixed width in the light theme, inline the computed
+// styles, wrap with title / definition / legend / attribution, rasterize at 2x.
+let fontCSS = null;
+async function embeddedLato() {
+  if (fontCSS !== null) return fontCSS;
+  fontCSS = "";
+  try {
+    const css = await (await fetch("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap")).text();
+    const faces = css.split("/* ").filter(b => b.startsWith("latin */"));
+    for (const face of faces) {
+      const url = (face.match(/url\((https:[^)]+)\)/) || [])[1], wt = (face.match(/font-weight:\s*(\d+)/) || [])[1];
+      if (!url) continue;
+      const blob = await (await fetch(url)).blob();
+      const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+      fontCSS += `@font-face{font-family:Lato;font-weight:${wt};src:url(${data}) format("woff2");}`;
+    }
+  } catch (_) { fontCSS = ""; }
+  return fontCSS;
+}
+
+function wrapText(text, size, weight, maxW) {
+  const ctx = document.createElement("canvas").getContext("2d");
+  ctx.font = `${weight} ${size}px Lato, Helvetica, Arial, sans-serif`;
+  const lines = []; let line = "";
+  for (const w of text.split(" ")) {
+    const t = line ? line + " " + w : w;
+    if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+async function downloadPNG() {
+  const btn = $("png"); btn.disabled = true; btn.textContent = "Preparing…";
+  const root = document.documentElement, prevTheme = root.getAttribute("data-theme");
+  const EW = 1000, PAD = 40, OUTW = EW + 2 * PAD;
+  let clone, vbH, col = {};
+  // Synchronous block: switch theme, redraw, capture, restore -- no repaint in between.
+  root.setAttribute("data-theme", "light");
+  try {
+    render({ width: EW });
+    const src = $("svg");
+    vbH = +src.getAttribute("viewBox").split(" ")[3];
+    clone = src.cloneNode(true);
+    const orig = src.querySelectorAll("*"), copy = clone.querySelectorAll("*");
+    const props = ["fill", "stroke", "stroke-width", "stroke-dasharray", "stroke-linejoin", "font-size", "font-weight"];
+    orig.forEach((o, i) => {
+      const c = copy[i];
+      if (o.tagName === "rect" || o.getAttribute("visibility") === "hidden") { c.setAttribute("data-drop", "1"); return; }
+      const st = getComputedStyle(o);
+      props.forEach(p => c.style.setProperty(p, st.getPropertyValue(p)));
+      c.removeAttribute("class");
+    });
+    clone.querySelectorAll("[data-drop]").forEach(e => e.remove());
+    const rs = getComputedStyle(root);
+    ["ink", "ink-2", "cat", "spend", "surface"].forEach(k => col[k] = rs.getPropertyValue("--" + k).trim());
+  } finally {
+    if (prevTheme === null) root.removeAttribute("data-theme"); else root.setAttribute("data-theme", prevTheme);
+    render();
+  }
+
+  const S = current.S, month = D.latest;
+  const title = $("title").textContent;
+  const def = state.wt === "u" ? "Share of categories: " + DEF.u + "."
+            : state.wt === "w" ? "Share of spending: " + DEF.w + "."
+            : "Share of categories counts each of the 177 categories equally; share of spending weights each by its share of consumer spending.";
+  const src = `Source: U.S. Bureau of Economic Analysis, PCE price indexes and spending by type of product (Tables 2.4.4U and 2.4.5U); ` +
+              `calculations over the 177 detailed PCE categories used in the Dallas Fed trimmed mean. Data through ${LONGM[+month.slice(5) - 1]} ${month.slice(0, 4)}.`;
+  const tL = wrapText(title, 26, 400, OUTW - 2 * PAD), dL = wrapText(def, 15, 400, OUTW - 2 * PAD), sL = wrapText(src, 13, 400, OUTW - 2 * PAD);
+
+  const NS2 = "http://www.w3.org/2000/svg";
+  const out = document.createElementNS(NS2, "svg");
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  let y = PAD + 26, parts = [];
+  tL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="26" fill="${col.ink}">${esc(l)}</text>`); y += 33; });
+  y += 2;
+  dL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="15" fill="${col["ink-2"]}">${esc(l)}</text>`); y += 21; });
+  y += 12;
+  const chartY = y;
+  y += vbH + 22;
+  let lx = PAD;
+  const key = (color, dash, label) => {
+    parts.push(`<line x1="${lx}" x2="${lx + 22}" y1="${y - 5}" y2="${y - 5}" stroke="${color}" stroke-width="${dash ? 1.5 : 3}"${dash ? ' stroke-dasharray="5 3"' : ""}/>`);
+    parts.push(`<text x="${lx + 30}" y="${y}" font-size="14" fill="${col["ink-2"]}">${esc(label)}</text>`);
+    lx += 30 + wrapText(label, 14, 400, 1e9)[0].length * 7.2 + 28;
+  };
+  S.forEach(s => key(col[s.cls], false, s.name));
+  key(col["ink-2"], true, `${D.avgWindow[0].slice(0, 4)}–${D.avgWindow[1].slice(0, 4)} average`);
+  y += 30;
+  sL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="13" fill="${col["ink-2"]}">${esc(l)}</text>`); y += 18; });
+  y += 4;
+  parts.push(`<text x="${PAD}" y="${y}" font-size="13" font-weight="700" fill="${col.ink}">Chart: Devesh Kodnani</text>`);
+  const OUTH = y + PAD - 10;
+
+  clone.setAttribute("x", PAD); clone.setAttribute("y", chartY);
+  clone.setAttribute("width", EW); clone.setAttribute("height", vbH);
+  clone.removeAttribute("role"); clone.removeAttribute("aria-labelledby"); clone.removeAttribute("id");
+  const css = await embeddedLato();
+  const svgText = `<svg xmlns="${NS2}" width="${OUTW}" height="${OUTH}" viewBox="0 0 ${OUTW} ${OUTH}" ` +
+    `font-family="Lato, Helvetica, Arial, sans-serif"><style>${css}</style>` +
+    `<rect width="100%" height="100%" fill="#ffffff"/>${parts.join("")}` +
+    new XMLSerializer().serializeToString(clone) + `</svg>`;
+
+  try {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej;
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText); });
+    const scale = 2, cv = document.createElement("canvas");
+    cv.width = OUTW * scale; cv.height = OUTH * scale;
+    const ctx = cv.getContext("2d"); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
+    const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    const wname = { u: "categories", w: "spending", b: "both" }[state.wt];
+    a.download = `pce_breadth_${state.h}m_${wname}_${String(state.thr).replace(".", "p")}pct_${month}.png`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } finally {
+    btn.disabled = false; btn.textContent = "Download PNG";
+  }
+}
+
 function downloadCSV() {
   const { S, idx } = current;
   const rows = [["month", ...S.map(s => `${s.key === "u" ? "unweighted" : "weighted"}_${state.h}m_ge${state.thr}pct`)]];
@@ -380,6 +546,7 @@ const firstYr = +D.dates[13].slice(0, 4);
 });
 sel.addEventListener("change", e => { state.start = e.target.value; render(); });
 $("dl").addEventListener("click", downloadCSV);
+$("png").addEventListener("click", () => downloadPNG().catch(e => { console.error(e); $("png").disabled = false; $("png").textContent = "Download PNG"; }));
 function syncControls() {
   [...$("hz").children].forEach(c => c.setAttribute("aria-pressed", +c.dataset.v === state.h));
   [...$("wt").children].forEach(c => c.setAttribute("aria-pressed", c.dataset.v === state.wt));
