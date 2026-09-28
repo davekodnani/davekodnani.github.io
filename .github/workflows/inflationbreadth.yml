@@ -1,0 +1,70 @@
+name: Update inflation breadth
+
+on:
+  schedule:
+    # 11:50 UTC = 7:50am EDT / 6:50am EST, so polling is live before the 8:30am ET release
+    # year-round (GitHub often starts scheduled jobs a few minutes late).
+    - cron: "50 11 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Refetch and republish even if BEA has nothing new"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inflationbreadth
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    defaults:
+      run:
+        working-directory: _tools/inflationbreadth
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pandas==2.3.3 requests cryptography
+
+      - name: Wait for new BEA data and build
+        id: build
+        env:
+          BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
+          SKIP_PNG: "1"
+          FORCE: ${{ inputs.force }}
+        run: |
+          set +e
+          if [ "$FORCE" = "true" ]; then
+            python pce_breadth.py update
+          else
+            # Quick check on ordinary days; on release-due days poll every 30s for up to 330 min.
+            python pce_breadth.py auto --minutes 330 --interval 30
+          fi
+          rc=$?
+          set -e
+          if [ $rc -eq 0 ]; then echo "updated=true" >> "$GITHUB_OUTPUT"
+          elif [ $rc -eq 3 ]; then echo "updated=false" >> "$GITHUB_OUTPUT"
+          else exit $rc; fi
+
+      - name: Encrypt and publish
+        if: steps.build.outputs.updated == 'true'
+        env:
+          PAGE_PASSWORD: ${{ secrets.PAGE_PASSWORD }}
+        run: |
+          python gate.py charts/pce_breadth.html ../../inflationbreadth/index.html
+          month=$(python -c "import json;print(json.load(open('data/raw/meta.json'))['latest_month'])")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ../../inflationbreadth/index.html data/raw/meta.json
+          git commit -m "Inflation breadth: update through $month"
+          git pull --rebase
+          git push
