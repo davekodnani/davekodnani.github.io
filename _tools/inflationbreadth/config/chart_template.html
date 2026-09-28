@@ -475,9 +475,8 @@ async function downloadPNG() {
   const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   let y = PAD + 26, parts = [];
   tL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="26" fill="${col.ink}">${esc(l)}</text>`); y += 33; });
-  y += 10;
-  const chartY = y;
-  y += vbH + 22;
+  // Legend sits just under the title, above the plot.
+  y += 4;
   let lx = PAD;
   const key = (color, dash, label) => {
     parts.push(`<line x1="${lx}" x2="${lx + 22}" y1="${y - 5}" y2="${y - 5}" stroke="${color}" stroke-width="${dash ? 1.5 : 3}"${dash ? ' stroke-dasharray="5 3"' : ""}/>`);
@@ -486,7 +485,9 @@ async function downloadPNG() {
   };
   S.forEach(s => key(col[s.cls], false, s.name));
   key(col["ink-2"], true, `${D.avgWindow[0].slice(0, 4)}–${D.avgWindow[1].slice(0, 4)} average`);
-  y += 30;
+  y += 8;
+  const chartY = y;
+  y += vbH + 26;
   dL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="13" fill="${col["ink-2"]}">${esc(l)}</text>`); y += 18; });
   sL.forEach(l => { parts.push(`<text x="${PAD}" y="${y}" font-size="13" fill="${col["ink-2"]}">${esc(l)}</text>`); y += 18; });
   y += 4;
