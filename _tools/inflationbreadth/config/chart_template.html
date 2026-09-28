@@ -193,8 +193,10 @@ function mean(s, a, b) {
 
 function series() {
   const out = [];
-  if (state.wt !== "w") out.push({ key: "u", name: "Unweighted", cls: "cat", s: breadth(state.h, state.thr, false) });
-  if (state.wt !== "u") out.push({ key: "w", name: "Spending-weighted", cls: "spend", s: breadth(state.h, state.thr, true) });
+  // Legend names: a single line is just "Share of categories"; with both, name the weighting.
+  const both = state.wt === "b";
+  if (state.wt !== "w") out.push({ key: "u", name: both ? "Unweighted" : "Share of categories", cls: "cat", s: breadth(state.h, state.thr, false) });
+  if (state.wt !== "u") out.push({ key: "w", name: both ? "Weighted by spending shares" : "Share of categories", cls: "spend", s: breadth(state.h, state.thr, true) });
   return out;
 }
 
@@ -417,6 +419,12 @@ async function embeddedLato() {
   return fontCSS;
 }
 
+function textWidth(text, size, weight = 400) {
+  const ctx = document.createElement("canvas").getContext("2d");
+  ctx.font = `${weight} ${size}px Lato, Helvetica, Arial, sans-serif`;
+  return ctx.measureText(text).width;
+}
+
 function wrapText(text, size, weight, maxW) {
   const ctx = document.createElement("canvas").getContext("2d");
   ctx.font = `${weight} ${size}px Lato, Helvetica, Arial, sans-serif`;
@@ -480,7 +488,7 @@ async function downloadPNG() {
   const key = (color, dash, label) => {
     parts.push(`<line x1="${lx}" x2="${lx + 22}" y1="${y - 5}" y2="${y - 5}" stroke="${color}" stroke-width="${dash ? 1.5 : 3}"${dash ? ' stroke-dasharray="5 3"' : ""}/>`);
     parts.push(`<text x="${lx + 30}" y="${y}" font-size="14" fill="${col["ink-2"]}">${esc(label)}</text>`);
-    lx += 30 + wrapText(label, 14, 400, 1e9)[0].length * 7.2 + 28;
+    lx += 30 + textWidth(label, 14) + 28;
   };
   S.forEach(s => key(col[s.cls], false, s.name));
   key(col["ink-2"], true, `${D.avgWindow[0].slice(0, 4)}–${D.avgWindow[1].slice(0, 4)} average`);
