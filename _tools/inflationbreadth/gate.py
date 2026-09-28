@@ -4,7 +4,7 @@ The page is encrypted with AES-256-GCM using a key derived from the password
 (PBKDF2-HMAC-SHA256, 200k iterations) and decrypted in the browser, so only
 ciphertext is published.
 
-  python3 gate.py charts/pce_breadth.html path/to/site/inflationbreadth/index.html
+  python3 gate.py charts/pce_breadth.html path/to/site/inflationbreadth/index.html [--title "Page title"]
 Password comes from $PAGE_PASSWORD (or .env PAGE_PASSWORD=...).
 """
 import base64
@@ -87,17 +87,22 @@ def password():
     return pw
 
 
-def gate(html: str, pw: str) -> str:
+def gate(html: str, pw: str, title: str = TITLE) -> str:
     salt, iv = os.urandom(16), os.urandom(12)
     key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=ITER).derive(pw.encode())
     ct = AESGCM(key).encrypt(iv, html.encode(), None)
     b64 = lambda b: base64.b64encode(b).decode()
-    return (GATE.replace("__TITLE__", TITLE).replace("__SALT__", b64(salt)).replace("__IV__", b64(iv))
+    return (GATE.replace("__TITLE__", title).replace("__SALT__", b64(salt)).replace("__IV__", b64(iv))
             .replace("__ITER__", str(ITER)).replace("__CT__", b64(ct)))
 
 
 if __name__ == "__main__":
-    src, dst = map(Path, sys.argv[1:3])
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(gate(src.read_text(), password()))
-    print(f"wrote {dst}")
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("src", type=Path)
+    ap.add_argument("dst", type=Path)
+    ap.add_argument("--title", default=TITLE)
+    a = ap.parse_args()
+    a.dst.parent.mkdir(parents=True, exist_ok=True)
+    a.dst.write_text(gate(a.src.read_text(), password(), a.title))
+    print(f"wrote {a.dst}")
