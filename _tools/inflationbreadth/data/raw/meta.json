@@ -1,7 +1,7 @@
 {
-  "fetched": "2026-09-28T21:41:58",
-  "source": "BEA API (NIUnderlyingDetail), tables U20404/U20405",
-  "bea_last_revised": "August 26, 2026",
+  "fetched": "2026-09-28T21:50:57",
+  "source": "BEA flat file NipaDataM.txt",
+  "bea_last_revised": null,
   "latest_month": "2026-07",
   "flat_last_modified": "Wed, 26 Aug 2026 12:30:02 GMT"
 }
