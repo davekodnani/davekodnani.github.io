@@ -36,8 +36,7 @@ def render_pngs(prices, nominal, meta, threshold=pb.DEFAULT_THRESHOLD, start="20
         for wt in pb.WEIGHTINGS:
             s = pb.breadth(prices, nominal, months, threshold, wt == "weighted").dropna()
             avg = s[pb.AVG_WINDOW[0]:pb.AVG_WINDOW[1]].mean()
-            title = (f"Share of PCE categories with {HORIZON_LABEL[h]} price increases at or above {threshold:g} percent"
-                     + (", weighted by spending" if wt == "weighted" else ""))
+            title = f"Share of PCE categories with {HORIZON_LABEL[h]} price increases at or above {threshold:g} percent"
             path = pb.CHARTS / f"pce_breadth_{h}_{wt}_{thr}pct.png"
             _plot(s[start:], avg, title, meta, path)
     pb.log(f"wrote {len(pb.HORIZONS) * len(pb.WEIGHTINGS)} PNGs to {pb.CHARTS}")

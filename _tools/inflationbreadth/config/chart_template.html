@@ -246,9 +246,6 @@ function explain(S, last) {
   if (state.wt !== "u") {
     para("Spending-weighted: ", `${DEF.w}. In ${when}, categories accounting for ${v("w").toFixed(0)}% of consumer spending had prices up ${state.thr}% or more ${hzPhrase()}.`);
   }
-  if (state.wt !== "u") {
-    para("Note: ", "both measures count price increases, not spending growth. Spending only sets how much each category counts.");
-  }
   if (state.wt === "b") {
     const gap = v("w") - v("u");
     para("Reading the gap: ", Math.abs(gap) < 3
@@ -266,8 +263,7 @@ function render(opts = {}) {
   const idx = []; for (let t = i0; t < T; t++) if (S.some(x => !Number.isNaN(x.s[t]))) idx.push(t);
   current = { S, idx };
 
-  $("title").textContent = `Share of PCE categories with ${hzText()} price increases at or above ${state.thr} percent` +
-    (state.wt === "w" ? ", weighted by spending" : "");
+  $("title").textContent = `Share of PCE categories with ${hzText()} price increases at or above ${state.thr} percent`;
   $("sub").textContent = `177 detailed PCE categories · data through ${LONGM[+D.latest.slice(5) - 1]} ${D.latest.slice(0, 4)}`;
 
   // Stat row: latest value per series with change vs prior month.
