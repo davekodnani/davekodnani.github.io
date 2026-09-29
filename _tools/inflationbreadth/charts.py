@@ -86,6 +86,41 @@ def _plot(s, avg, title, meta, path):
     plt.close(fig)
 
 
+# NBER recessions (FRED USREC convention: month after peak through trough). Fallback only;
+# the build pulls the current list from FRED so new NBER dates flow through.
+RECESSIONS_FALLBACK = [
+    ["1960-05", "1961-02"], ["1970-01", "1970-11"], ["1973-12", "1975-03"], ["1980-02", "1980-07"],
+    ["1981-08", "1982-11"], ["1990-08", "1991-03"], ["2001-04", "2001-11"], ["2008-01", "2009-06"],
+    ["2020-03", "2020-04"],
+]
+
+
+def recessions():
+    try:
+        import io
+        import requests
+        r = requests.get("https://fred.stlouisfed.org/graph/fredgraph.csv?id=USREC", timeout=30)
+        r.raise_for_status()
+        df = pd.read_csv(io.StringIO(r.text))
+        df.columns = ["date", "rec"]
+        df["m"] = df.date.str[:7]
+        out, start, prev = [], None, None
+        for m, v in zip(df.m, df.rec):
+            if v == 1 and start is None:
+                start = m
+            if v == 0 and start is not None:
+                out.append([start, prev])
+                start = None
+            prev = m
+        if start is not None:
+            out.append([start, prev])
+        if len(out) >= len(RECESSIONS_FALLBACK):
+            return out
+    except Exception as e:
+        pb.log(f"FRED recession fetch failed ({e!r}); using built-in NBER dates")
+    return RECESSIONS_FALLBACK
+
+
 def render_html(prices, nominal, comps, meta):
     """Embed component-level data so the page can recompute any threshold client-side."""
     dates = [d.strftime("%Y-%m") for d in prices.index]
@@ -99,6 +134,7 @@ def render_html(prices, nominal, comps, meta):
         "latest": meta["latest_month"],
         "fetched": meta["fetched"],
         "avgWindow": list(pb.AVG_WINDOW),
+        "recessions": recessions(),
     }
     html = TEMPLATE.read_text().replace("/*__DATA__*/null", json.dumps(payload, separators=(",", ":")))
     out = pb.CHARTS / "pce_breadth.html"
