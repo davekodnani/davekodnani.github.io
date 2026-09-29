@@ -2,9 +2,12 @@ name: Update inflation breadth
 
 on:
   schedule:
-    # 11:50 UTC = 7:50am EDT / 6:50am EST, so polling is live before the 8:30am ET release
-    # year-round (GitHub often starts scheduled jobs a few minutes late).
-    - cron: "50 11 * * 1-5"
+    # GitHub often starts scheduled runs late (we've seen 5+ hours), so rather than one
+    # long poll we fire many short ones. Minutes avoid :00, when GitHub's queue is busiest.
+    # 12:07-15:52 UTC every 15 min covers the 8:30am ET release in both EDT (12:30 UTC)
+    # and EST (13:30 UTC); hourly runs after that catch late releases and late starts.
+    - cron: "7,22,37,52 12-15 * * 1-5"
+    - cron: "17 16-23 * * 1-5"
   workflow_dispatch:
     inputs:
       force:
@@ -16,13 +19,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: inflationbreadth
+  # Manual runs get their own queue so a scheduled run can never bump a pending one.
+  group: inflationbreadth-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: _tools/inflationbreadth
@@ -46,8 +50,9 @@ jobs:
           if [ "$FORCE" = "true" ]; then
             python pce_breadth.py update
           else
-            # Quick check on ordinary days; on release-due days poll every 30s for up to 330 min.
-            python pce_breadth.py auto --minutes 330 --interval 30
+            # Quick check on ordinary days; on release-due days poll every 30s for up to 25 min
+            # (the next scheduled run picks up from there).
+            python pce_breadth.py auto --minutes 25 --interval 30
           fi
           rc=$?
           set -e
