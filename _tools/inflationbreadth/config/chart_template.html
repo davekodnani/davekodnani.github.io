@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PCE Inflation Breadth</title>
+<title>Inflation Breadth</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -97,10 +97,17 @@ th:first-child, td:first-child { text-align: left; }
 </head>
 <body>
 <main>
-  <h1 id="title">Share of PCE with 12-month price increases at or above 3 percent</h1>
+  <h1 id="title">Share of PCE categories with 12-month price increases at or above 3 percent</h1>
   <p class="sub" id="sub"></p>
 
   <div class="controls">
+    <div class="ctl">
+      <span class="lbl">Measure</span>
+      <div class="seg" id="ms">
+        <button data-v="pce" aria-pressed="true">PCE</button>
+        <button data-v="cpi" aria-pressed="false">CPI</button>
+      </div>
+    </div>
     <div class="ctl">
       <span class="lbl">Threshold (at or above)</span>
       <div class="thr">
@@ -119,7 +126,7 @@ th:first-child, td:first-child { text-align: left; }
     <div class="ctl">
       <span class="lbl">Weighting</span>
       <div class="seg" id="wt">
-        <button data-v="u" aria-pressed="true" title="Each of the 177 categories counts equally">Unweighted</button>
+        <button data-v="u" aria-pressed="true" title="Each category counts equally">Unweighted</button>
         <button data-v="w" aria-pressed="false" title="Same price test; categories weighted by their share of consumer spending">Spending-weighted</button>
         <button data-v="b" aria-pressed="false">Both</button>
       </div>
@@ -151,9 +158,14 @@ th:first-child, td:first-child { text-align: left; }
 </main>
 
 <script>
-const D = /*__DATA__*/null;
-const T = D.dates.length, N = D.names.length;
-const state = { thr: 3, h: 12, wt: "u", start: "2000", rec: false };
+const ALL = /*__DATA__*/null;
+const state = { m: "pce", thr: 3, h: 12, wt: "u", start: "2000", rec: false };
+// D is the active dataset (PCE or CPI); everything below reads from it.
+let D, T, N, growthCache = {};
+function useDataset(key) {
+  D = Object.assign({}, ALL.datasets[key], { avgWindow: ALL.avgWindow, recessions: ALL.recessions });
+  T = D.dates.length; N = D.names.length; growthCache = {};
+}
 const REC_NOTE = "Shaded areas indicate U.S. recessions as dated by the NBER.";
 const $ = id => document.getElementById(id);
 
@@ -161,11 +173,12 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 const LONGM = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const fmtDate = s => MONTHS[+s.slice(5) - 1] + " " + s.slice(0, 4);
 
-// Growth rates cached per horizon (percent, annualized for < 12m).
-const growthCache = {};
+// Growth rates cached per horizon (percent, annualized for < 12m). 12-month changes use
+// D.p12; shorter horizons use D.pshort when the dataset has one (CPI: seasonally adjusted).
 function growth(h) {
   if (growthCache[h]) return growthCache[h];
-  const out = D.prices.map(p => {
+  const P = h === 12 || !D.pshort ? D.p12 : D.pshort;
+  const out = P.map(p => {
     const g = new Float64Array(T).fill(NaN);
     for (let t = h; t < T; t++) {
       const a = p[t], b = p[t - h];
@@ -183,7 +196,7 @@ function breadth(h, thr, weighted) {
     for (let i = 0; i < N; i++) {
       const g = G[i][t];
       if (Number.isNaN(g)) continue;
-      const w = weighted ? D.nominal[i][t] : 1;
+      const w = weighted ? D.weights[i][t] : 1;
       if (w == null) continue;
       den += w;
       if (g >= thr) num += w;
@@ -203,8 +216,9 @@ function series() {
   const out = [];
   // Legend names: a single line is just "Share of categories"; with both, name the weighting.
   const both = state.wt === "b";
-  if (state.wt !== "w") out.push({ key: "u", name: both ? "Unweighted" : "Share of categories", cls: "cat", s: breadth(state.h, state.thr, false) });
-  if (state.wt !== "u") out.push({ key: "w", name: both ? "Weighted by spending shares" : "Share of categories", cls: "spend", s: breadth(state.h, state.thr, true) });
+  const single = `Share of ${D.unit}`;
+  if (state.wt !== "w") out.push({ key: "u", name: both ? "Unweighted" : single, cls: "cat", s: breadth(state.h, state.thr, false) });
+  if (state.wt !== "u") out.push({ key: "w", name: both ? "Weighted by spending shares" : single, cls: "spend", s: breadth(state.h, state.thr, true) });
   return out;
 }
 
@@ -221,10 +235,11 @@ function el(tag, attrs, parent, text) {
 
 let current = null;
 function writeHash() {
-  history.replaceState(null, "", `#h=${state.h}&w=${state.wt}&t=${state.thr}&s=${state.start}` + (state.rec ? "&r=1" : ""));
+  history.replaceState(null, "", `#m=${state.m}&h=${state.h}&w=${state.wt}&t=${state.thr}&s=${state.start}` + (state.rec ? "&r=1" : ""));
 }
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
+  if (ALL.datasets[p.get("m")]) state.m = p.get("m");
   if ([12, 6, 3].includes(+p.get("h"))) state.h = +p.get("h");
   if (["u", "w", "b"].includes(p.get("w"))) state.wt = p.get("w");
   if (p.get("t") !== null && Number.isFinite(parseFloat(p.get("t")))) state.thr = parseFloat(p.get("t"));
@@ -239,8 +254,8 @@ function countAbove(t) {
 }
 
 const DEF = {
-  u: "each of the 177 categories counts equally, so the share is simply how many categories have price increases at or above the threshold",
-  w: "the same price test, but each category counts by its share of consumer spending, so big-budget items like housing and health care matter far more than small ones like watches or toys",
+  get u() { return `each of the ${D.count} ${D.unit} counts equally, so the share is simply how many ${D.unit} have price increases at or above the threshold`; },
+  get w() { return `the same price test, but each ${D.unitOne} counts by its ${D.weightPhrase}, so big-budget items like ${D.bigExamples} matter far more than small ones like ${D.smallExamples}`; },
 };
 function hzPhrase() { return state.h === 12 ? "over the past 12 months" : `over the past ${state.h} months (annualized)`; }
 
@@ -252,18 +267,18 @@ function explain(S, last) {
   const v = k => S.find(x => x.key === k).s[last];
   if (state.wt !== "w") {
     const [n, k] = countAbove(last);
-    para("Unweighted: ", `${DEF.u}. In ${when}, ${n} of ${k} categories (${v("u").toFixed(0)}%) had prices up ${state.thr}% or more ${hzPhrase()}.`);
+    para("Unweighted: ", `${DEF.u}. In ${when}, ${n} of ${k} ${D.unit} (${v("u").toFixed(0)}%) had prices up ${state.thr}% or more ${hzPhrase()}.`);
   }
   if (state.wt !== "u") {
-    para("Spending-weighted: ", `${DEF.w}. In ${when}, categories accounting for ${v("w").toFixed(0)}% of consumer spending had prices up ${state.thr}% or more ${hzPhrase()}.`);
+    para("Spending-weighted: ", `${DEF.w}. In ${when}, ${D.unit} accounting for ${v("w").toFixed(0)}% of consumer spending had prices up ${state.thr}% or more ${hzPhrase()}.`);
   }
   if (state.wt === "b") {
     const gap = v("w") - v("u");
     para("Reading the gap: ", Math.abs(gap) < 3
-      ? "the two lines are close, so above-threshold inflation is spread about evenly across big and small categories."
+      ? `the two lines are close, so above-threshold inflation is spread about evenly across big and small ${D.unit}.`
       : gap > 0
-        ? "the spending-weighted share is above the unweighted share, so above-threshold inflation is concentrated in the large categories that make up more of household budgets."
-        : "the spending-weighted share is below the unweighted share, so above-threshold inflation is mostly in smaller categories while big-budget items are running cooler.");
+        ? `the spending-weighted share is above the unweighted share, so above-threshold inflation is concentrated in the large ${D.unit} that make up more of household budgets.`
+        : `the spending-weighted share is below the unweighted share, so above-threshold inflation is mostly in smaller ${D.unit} while big-budget items are running cooler.`);
   }
 }
 
@@ -274,8 +289,8 @@ function render(opts = {}) {
   const idx = []; for (let t = i0; t < T; t++) if (S.some(x => !Number.isNaN(x.s[t]))) idx.push(t);
   current = { S, idx };
 
-  $("title").textContent = `Share of PCE categories with ${hzText()} price increases at or above ${state.thr} percent`;
-  $("sub").textContent = `177 detailed PCE categories · data through ${LONGM[+D.latest.slice(5) - 1]} ${D.latest.slice(0, 4)}`;
+  $("title").textContent = `Share of ${D.noun} with ${hzText()} price increases at or above ${state.thr} percent`;
+  $("sub").textContent = `${D.subtitle} · data through ${LONGM[+D.latest.slice(5) - 1]} ${D.latest.slice(0, 4)}`;
 
   // Stat row: latest value per series with change vs prior month.
   const st = $("stats"); st.replaceChildren();
@@ -404,9 +419,7 @@ function render(opts = {}) {
   const lg = $("legend"); lg.replaceChildren();
   if (S.length > 1) S.forEach(s => { const sp = document.createElement("span"); const i = document.createElement("i");
     i.style.borderColor = `var(--${s.cls})`; sp.append(i, document.createTextNode(s.name)); lg.appendChild(sp); });
-  $("note").textContent = `Source: BEA Tables 2.4.4U and 2.4.5U; calculations from the 177 detailed PCE categories used in the Dallas Fed trimmed mean. ` +
-    `Spending-weighted: the same price-increase test, with each category weighted by its current-month nominal expenditure. ` +
-    (state.rec ? REC_NOTE + " " : "") + `Built ${D.fetched.replace("T", " ")}.`;
+  $("note").textContent = D.notePage + " " + (state.rec ? REC_NOTE + " " : "") + `Built ${D.fetched.replace("T", " ")}.`;
 
   // Table (newest first).
   const tb = $("tbl"); tb.replaceChildren();
@@ -487,13 +500,8 @@ async function downloadPNG() {
 
   const S = current.S, month = D.latest;
   const title = $("title").textContent;
-  const def = "Note: " + ({
-    u: "Unweighted; each of the 177 detailed PCE categories counts equally.",
-    w: "Measures price increases, not spending growth; each of the 177 detailed PCE categories is weighted by its share of consumer spending.",
-    b: "Both lines measure price increases, not spending growth. Unweighted counts each of the 177 detailed PCE categories equally; spending-weighted counts each by its share of consumer spending.",
-  })[state.wt] + (state.rec ? " " + REC_NOTE : "");
-  const src = `Source: U.S. Bureau of Economic Analysis, PCE price indexes and spending by type of product (Tables 2.4.4U and 2.4.5U); ` +
-              `calculations over the 177 detailed PCE categories used in the Dallas Fed trimmed mean. Data through ${LONGM[+month.slice(5) - 1]} ${month.slice(0, 4)}.`;
+  const def = "Note: " + D.pngNote[state.wt] + (D.pngNoteExtra ? " " + D.pngNoteExtra : "") + (state.rec ? " " + REC_NOTE : "");
+  const src = `Source: ${D.pngSource} Data through ${LONGM[+month.slice(5) - 1]} ${month.slice(0, 4)}.`;
   const tL = wrapText(title, 26, 400, OUTW - 2 * PAD), dL = wrapText(def, 13, 400, OUTW - 2 * PAD), sL = wrapText(src, 13, 400, OUTW - 2 * PAD);
 
   const NS2 = "http://www.w3.org/2000/svg";
@@ -537,7 +545,7 @@ async function downloadPNG() {
     const blob = await new Promise(r => cv.toBlob(r, "image/png"));
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     const wname = { u: "categories", w: "spending", b: "both" }[state.wt];
-    a.download = `pce_breadth_${state.h}m_${wname}_${String(state.thr).replace(".", "p")}pct_${month}.png`;
+    a.download = `${state.m}_breadth_${state.h}m_${wname}_${String(state.thr).replace(".", "p")}pct_${month}.png`;
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   } finally {
     btn.disabled = false; btn.textContent = "Download PNG";
@@ -550,7 +558,7 @@ function downloadCSV() {
   idx.forEach(t => rows.push([D.dates[t], ...S.map(s => Number.isNaN(s.s[t]) ? "" : s.s[t].toFixed(2))]));
   const blob = new Blob([rows.map(r => r.join(",")).join("\n")], { type: "text/csv" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-  a.download = `pce_breadth_${state.h}m_${state.wt}_${state.thr}pct.csv`; a.click();
+  a.download = `${state.m}_breadth_${state.h}m_${state.wt}_${state.thr}pct.csv`; a.click();
 }
 
 // Controls.
@@ -562,19 +570,30 @@ function seg(id, key, parse) {
   });
 }
 seg("hz", "h", Number); seg("wt", "wt", String);
+$("ms").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || b.dataset.v === state.m) return;
+  state.m = b.dataset.v; useDataset(state.m); syncControls(); render();
+});
 function setThr(v) { if (!Number.isFinite(v)) return; state.thr = v; $("thrN").value = v; $("thrR").value = Math.max(0, Math.min(10, v)); render(); }
 $("thrR").addEventListener("input", e => setThr(parseFloat(e.target.value)));
 $("thrN").addEventListener("change", e => setThr(parseFloat(e.target.value)));
 const sel = $("start");
-const firstYr = +D.dates[13].slice(0, 4);
-[firstYr, 1970, 1980, 1990, 2000, 2010, 2015, 2019, 2022].filter((v, i, a) => v >= firstYr && a.indexOf(v) === i).forEach(yv => {
-  const o = document.createElement("option"); o.value = yv; o.textContent = yv; if (yv === 2000) o.selected = true; sel.appendChild(o);
-});
+function startOptions() {
+  // First year with a full 12 months of history for the active dataset.
+  const firstYr = +D.dates[Math.min(13, T - 1)].slice(0, 4);
+  sel.replaceChildren();
+  [firstYr, 1970, 1980, 1990, 2000, 2010, 2015, 2019, 2022].filter((v, i, a) => v >= firstYr && a.indexOf(v) === i).forEach(yv => {
+    const o = document.createElement("option"); o.value = yv; o.textContent = yv; sel.appendChild(o);
+  });
+  if (+state.start < firstYr) state.start = String(firstYr);
+}
 sel.addEventListener("change", e => { state.start = e.target.value; render(); });
 $("dl").addEventListener("click", downloadCSV);
 $("rec").addEventListener("change", e => { state.rec = e.target.checked; render(); });
 $("png").addEventListener("click", () => downloadPNG().catch(e => { console.error(e); $("png").disabled = false; $("png").textContent = "Download PNG"; }));
 function syncControls() {
+  startOptions();
+  [...$("ms").children].forEach(c => c.setAttribute("aria-pressed", c.dataset.v === state.m));
   [...$("hz").children].forEach(c => c.setAttribute("aria-pressed", +c.dataset.v === state.h));
   [...$("wt").children].forEach(c => c.setAttribute("aria-pressed", c.dataset.v === state.wt));
   $("thrN").value = state.thr; $("thrR").value = Math.max(0, Math.min(10, state.thr));
@@ -584,7 +603,7 @@ function syncControls() {
   sel.value = state.start;
   $("rec").checked = state.rec;
 }
-readHash(); syncControls(); render();
+readHash(); useDataset(state.m); syncControls(); render();
 let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 120); });
 </script>
 </body>

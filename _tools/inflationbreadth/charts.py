@@ -121,22 +121,74 @@ def recessions():
     return RECESSIONS_FALLBACK
 
 
-def render_html(prices, nominal, comps, meta):
-    """Embed component-level data so the page can recompute any threshold client-side."""
-    dates = [d.strftime("%Y-%m") for d in prices.index]
-    def cols(df, nd):
-        return [[None if pd.isna(v) else round(float(v), nd) for v in df[c]] for c in comps.series_code]
-    payload = {
-        "dates": dates,
+def _cols(df, columns, nd):
+    return [[None if pd.isna(v) else round(float(v), nd) for v in df[c]] for c in columns]
+
+
+def pce_dataset(prices, nominal, comps, meta):
+    return {
+        "label": "PCE", "noun": "PCE categories", "unit": "categories", "unitOne": "category",
+        "count": len(comps), "subtitle": f"{len(comps)} detailed PCE categories",
+        "weightPhrase": "share of consumer spending",
+        "bigExamples": "housing and health care", "smallExamples": "watches or toys",
+        "notePage": "Source: BEA Tables 2.4.4U and 2.4.5U; calculations from the 177 detailed PCE categories "
+                    "used in the Dallas Fed trimmed mean. Spending-weighted: the same price-increase test, with "
+                    "each category weighted by its current-month nominal expenditure.",
+        "pngNote": {
+            "u": "Unweighted; each of the 177 detailed PCE categories counts equally.",
+            "w": "Measures price increases, not spending growth; each of the 177 detailed PCE categories is "
+                 "weighted by its share of consumer spending.",
+            "b": "Both lines measure price increases, not spending growth. Unweighted counts each of the 177 "
+                 "detailed PCE categories equally; spending-weighted counts each by its share of consumer spending.",
+        },
+        "pngSource": "U.S. Bureau of Economic Analysis, PCE price indexes and spending by type of product "
+                     "(Tables 2.4.4U and 2.4.5U); calculations over the 177 detailed PCE categories used in the "
+                     "Dallas Fed trimmed mean.",
+        "dates": [d.strftime("%Y-%m") for d in prices.index],
         "names": comps.name.tolist(),
-        "prices": cols(prices, 3),
-        "nominal": cols(nominal, 0),
-        "latest": meta["latest_month"],
-        "fetched": meta["fetched"],
-        "avgWindow": list(pb.AVG_WINDOW),
-        "recessions": recessions(),
+        "p12": _cols(prices, comps.series_code, 3),
+        "weights": _cols(nominal, comps.series_code, 0),
+        "latest": meta["latest_month"], "fetched": meta["fetched"],
     }
+
+
+def cpi_dataset(p12, pshort, weights, comps, meta):
+    n = len(comps)
+    return {
+        "label": "CPI", "noun": "CPI components", "unit": "components", "unitOne": "component",
+        "count": n, "subtitle": f"{n} CPI components (Cleveland Fed median CPI set)",
+        "weightPhrase": "share of consumer spending (BLS relative importance)",
+        "bigExamples": "shelter and food away from home", "smallExamples": "jewelry or footwear",
+        "notePage": "Source: BLS CPI-U; calculations from the 45 components used in the Cleveland Fed median CPI, "
+                    "with owners' equivalent rent split into four regions. Spending-weighted uses BLS relative "
+                    "importance, carried month to month by relative price changes. 12-month changes are not "
+                    "seasonally adjusted; 3- and 6-month changes are seasonally adjusted. October 2025 is "
+                    "interpolated (BLS collected no data during the 2025 government shutdown).",
+        "pngNote": {
+            "u": f"Unweighted; each of the {n} CPI components counts equally.",
+            "w": f"Measures price increases, not spending growth; each of the {n} CPI components is weighted by "
+                 "its share of consumer spending (BLS relative importance).",
+            "b": f"Both lines measure price increases, not spending growth. Unweighted counts each of the {n} CPI "
+                 "components equally; spending-weighted counts each by its share of consumer spending "
+                 "(BLS relative importance).",
+        },
+        "pngNoteExtra": "October 2025 is interpolated (no data were collected during the 2025 government shutdown).",
+        "pngSource": "U.S. Bureau of Labor Statistics, CPI-U price indexes and relative importance weights; "
+                     "calculations over the 45 components used in the Cleveland Fed median CPI.",
+        "dates": [d.strftime("%Y-%m") for d in p12.index],
+        "names": comps.name.tolist(),
+        "p12": _cols(p12, comps.idx, 3),
+        "pshort": _cols(pshort, comps.idx, 4),
+        "weights": _cols(weights, comps.idx, 4),
+        "latest": meta["latest_month"], "fetched": meta["fetched"],
+    }
+
+
+def render_html(datasets):
+    """Embed component-level data so the page can recompute any threshold client-side."""
+    payload = {"datasets": datasets, "avgWindow": list(pb.AVG_WINDOW), "recessions": recessions()}
     html = TEMPLATE.read_text().replace("/*__DATA__*/null", json.dumps(payload, separators=(",", ":")))
-    out = pb.CHARTS / "pce_breadth.html"
+    out = pb.CHARTS / "inflation_breadth.html"
     out.write_text(html)
-    pb.log(f"wrote {out}")
+    pb.log(f"wrote {out} ({len(html) / 1e6:.1f} MB)")
+    return out

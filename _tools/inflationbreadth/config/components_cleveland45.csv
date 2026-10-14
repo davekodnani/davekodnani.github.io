@@ -1,0 +1,46 @@
+idx,name,item_code,area_code,ri_name
+1,Jewelry and watches,SEAG,0000,Jewelry and watches
+2,Motor vehicle insurance,SETE,0000,Motor vehicle insurance
+3,Infants' and toddlers' apparel,SEAF,0000,Infants' and toddlers' apparel
+4,Motor vehicle fees,SETF,0000,Motor vehicle fees
+5,Fresh fruits and vegetables,SAF1131,0000,Fresh fruits and vegetables
+6,Energy services,SEHF,0000,Energy services
+7,Miscellaneous personal services,SEGD,0000,Miscellaneous personal services
+8,Footwear,SEAE,0000,Footwear
+9,Medical care services,SAM2,0000,Medical care services
+10,Medical care commodities,SAM1,0000,Medical care commodities
+11,Leased cars and trucks,SETA03,0000,Leased cars and trucks
+12,Tenants' and household insurance,SEHD,0000,Tenants' and household insurance
+13,Recreation,SAR,0000,Recreation
+14,Motor vehicle parts and equipment,SETC,0000,Motor vehicle parts and equipment
+15,Cereals and bakery products,SAF111,0000,Cereals and bakery products
+16,Household furnishings and operations,SAH3,0000,Household furnishings and operations
+17,Other food at home,SAF115,0000,Other food at home
+18,Meats poultry fish and eggs,SAF112,0000,"Meats, poultry, fish, and eggs"
+19,Alcoholic beverages,SAF116,0000,Alcoholic beverages
+20,Personal care products,SEGB,0000,Personal care products
+21,Rent of primary residence,SEHA,0000,Rent of primary residence
+22,Nonalcoholic beverages,SAF114,0000,Nonalcoholic beverages and beverage materials
+23,Women's and girls' apparel,SAA2,0000,Women's and girls' apparel
+24,New vehicles,SETA01,0000,New vehicles
+25,Food away from home,SEFV,0000,Food away from home
+26,Dairy and related products,SEFJ,0000,Dairy and related products
+27,Used cars and trucks,SETA02,0000,Used cars and trucks
+28,Personal care services,SEGC,0000,Personal care services
+29,Water sewer and trash collection,SEHG,0000,Water and sewer and trash collection services
+30,Processed fruits and vegetables,SEFM,0000,Processed fruits and vegetables
+31,Men's and boys' apparel,SAA1,0000,Men's and boys' apparel
+32,Tobacco and smoking products,SEGA,0000,Tobacco and smoking products
+33,Education,SAE1,0000,Education
+34,Motor vehicle maintenance and repair,SETD,0000,Motor vehicle maintenance and repair
+35,Miscellaneous personal goods,SEGE,0000,Miscellaneous personal goods
+36,Car and truck rental,SETA04,0000,Car and truck rental
+37,Communication,SAE2,0000,Communication
+38,Public transportation,SETG,0000,Public transportation
+39,Lodging away from home,SEHB,0000,Lodging away from home
+40,Motor fuel,SETB,0000,Motor fuel
+41,Fuel oil and other fuels,SEHE,0000,Fuel oil and other fuels
+42,Owners' equivalent rent: Northeast,SEHC01,0100,Owners' equivalent rent of residences
+43,Owners' equivalent rent: Midwest,SEHC01,0200,Owners' equivalent rent of residences
+44,Owners' equivalent rent: South,SEHC01,0300,Owners' equivalent rent of residences
+45,Owners' equivalent rent: West,SEHC01,0400,Owners' equivalent rent of residences

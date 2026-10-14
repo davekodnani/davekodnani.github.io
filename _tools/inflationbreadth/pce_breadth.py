@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Share of PCE categories with price growth at or above a threshold.
+"""Share of PCE categories (and CPI components) with price growth at or above a threshold.
 
 Components: the 177 detailed PCE categories used by the Dallas Fed trimmed-mean
 PCE (config/components_dallas177.csv) -- the same set as Claudia Sahm's chart.
@@ -10,8 +10,12 @@ Variants (6 per threshold; the HTML page recomputes for any threshold):
   weighting : unweighted (share of categories) | weighted (share of nominal spending)
   threshold : any X%, default 3 (comparison is >= X)
 
+CPI side: see cpi.py (45 Cleveland Fed median-CPI components, BLS data).
+
 Usage:
-  python3 pce_breadth.py update            # fetch latest data, rebuild all outputs
+  python3 pce_breadth.py update            # fetch latest PCE + CPI data, rebuild all outputs
+  python3 pce_breadth.py publish           # encrypt the page and push it to deveshkodnani.com
+  python3 pce_breadth.py release           # update + publish (what to run after a release)
   python3 pce_breadth.py build             # rebuild outputs from cached raw data
   python3 pce_breadth.py wait [--minutes N] [--interval S]
                                            # poll BEA until a month newer than the
@@ -278,19 +282,94 @@ def all_variants(prices, nominal, threshold=DEFAULT_THRESHOLD):
 # ---------------------------------------------------------------- outputs
 
 def build():
+    import charts
+    import cpi
     prices, nominal, comps = load_raw()
     meta = json.loads((RAW / "meta.json").read_text())
     df = all_variants(prices, nominal)
     df.index = df.index.strftime("%Y-%m")
     df.index.name = "month"
     df.round(2).to_csv(OUT / f"pce_breadth_{fmt_thr(DEFAULT_THRESHOLD)}pct.csv")
-    import charts
     if os.environ.get("SKIP_PNG") != "1":
         charts.render_pngs(prices, nominal, meta)
-    charts.render_html(prices, nominal, comps, meta)
+    datasets = {"pce": charts.pce_dataset(prices, nominal, comps, meta)}
+    _summary("PCE", df)
+
+    cmeta = json.loads((RAW / "cpi_meta.json").read_text())
+    p12, pshort, weights, ccomps = cpi.load()
+    cdf = cpi.variants(p12, pshort, weights)
+    cdf.index = cdf.index.strftime("%Y-%m")
+    cdf.index.name = "month"
+    cdf.round(2).to_csv(OUT / f"cpi_breadth_{fmt_thr(DEFAULT_THRESHOLD)}pct.csv")
+    datasets["cpi"] = charts.cpi_dataset(p12, pshort, weights, ccomps, cmeta)
+    _summary("CPI", cdf)
+    return charts.render_html(datasets)
+
+
+def _summary(label, df):
     last = df.iloc[-1]
-    log(f"built outputs through {df.index[-1]}: " +
-        ", ".join(f"{k}={last[k]:.0f}%" for k in df.columns if k != "n_categories"))
+    log(f"{label} through {df.index[-1]}: " +
+        ", ".join(f"{k}={last[k]:.0f}%" for k in df.columns if not k.startswith("n_")))
+
+
+def update():
+    """Refresh both sources; if one is down, keep its cached data and say so."""
+    import cpi
+    for label, fn in (("PCE", fetch_all), ("CPI", cpi.fetch)):
+        try:
+            fn()
+        except Exception as e:
+            log(f"WARNING: {label} fetch failed ({e!r}); using cached {label} data")
+    return build()
+
+
+SITE = ROOT / "site"  # local clone of davekodnani/davekodnani.github.io
+SITE_PAGE = "inflationbreadth/index.html"
+CODE_FILES = ["pce_breadth.py", "cpi.py", "cpi_weights.py", "charts.py", "gate.py", "README.md",
+              "config/components_dallas177.csv", "config/components_cleveland45.csv",
+              "config/cpi_ri_december.csv", "config/chart_template.html"]
+
+
+def publish():
+    """Encrypt the built page into the site repo, commit, push, and wait until it is live."""
+    import hashlib
+    import shutil
+    import subprocess
+    import gate
+
+    src = CHARTS / "inflation_breadth.html"
+    git = lambda *a: subprocess.run(["git", "-C", str(SITE), *a], check=True, capture_output=True, text=True).stdout
+    if not (SITE / ".git").exists():
+        subprocess.run(["gh", "repo", "clone", "davekodnani/davekodnani.github.io", str(SITE)], check=True)
+    git("pull", "-q", "--rebase")
+    page = SITE / SITE_PAGE
+    page.write_text(gate.gate(src.read_text(), gate.password(), "Inflation Breadth"))
+    for f in CODE_FILES:  # keep a copy of the source alongside the page (not served by Jekyll)
+        dst = SITE / "_tools" / "inflationbreadth" / f
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / f, dst)
+    git("add", SITE_PAGE, "_tools/inflationbreadth")
+    if not git("status", "--porcelain", SITE_PAGE, "_tools/inflationbreadth").strip():
+        log("site already up to date")
+        return
+    pm = json.loads((RAW / "meta.json").read_text())["latest_month"]
+    cm = json.loads((RAW / "cpi_meta.json").read_text())["latest_month"]
+    git("-c", "user.name=Devesh Kodnani", "-c", "user.email=devesh.kodnani@gmail.com", "commit", "-q", "-m",
+        f"Inflation breadth: PCE through {pm}, CPI through {cm}\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>")
+    git("push", "-q", "origin", "main")
+    log("pushed; waiting for GitHub Pages")
+    want = hashlib.md5(page.read_bytes()).hexdigest()
+    for _ in range(60):
+        time.sleep(15)
+        try:
+            live = requests.get(f"https://deveshkodnani.com/{SITE_PAGE.rsplit('/', 1)[0]}/",
+                                params={"r": time.time()}, timeout=30).content
+            if hashlib.md5(live).hexdigest() == want:
+                log("live at https://deveshkodnani.com/inflationbreadth/")
+                return
+        except Exception:
+            pass
+    log("WARNING: pushed, but the live page hadn't updated after 15 min (GitHub Pages delay?)")
 
 
 def fmt_thr(t):
@@ -331,6 +410,8 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("update")
     sub.add_parser("build")
+    sub.add_parser("publish")
+    sub.add_parser("release")
     sub.add_parser("status")
     for name in ("wait", "auto"):
         w = sub.add_parser(name)
@@ -340,10 +421,14 @@ def main():
     for d in (RAW, OUT, CHARTS):
         d.mkdir(parents=True, exist_ok=True)
     if a.cmd == "update":
-        fetch_all()
-        build()
+        update()
     elif a.cmd == "build":
         build()
+    elif a.cmd == "publish":
+        publish()
+    elif a.cmd == "release":
+        update()
+        publish()
     elif a.cmd == "status":
         latest, rev = bea_state()
         m = cached_meta()
