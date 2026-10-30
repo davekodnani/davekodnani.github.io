@@ -1,83 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CV — Devesh Kodnani</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>CV — Devesh Kodnani</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;font-family:Lora,Georgia,serif;background:#faf9f7;color:#1a1a1a;
+       display:flex;align-items:center;justify-content:center}
+  .gate{width:min(92vw,420px);text-align:center;padding:36px 30px}
+  .gate h1{font-size:24px;font-weight:500;margin:0 0 6px}
+  .gate p{color:#555;font-size:14px;line-height:1.5;margin:0 0 22px}
+  .gate form{display:flex;gap:8px;justify-content:center}
+  .gate input{flex:1;font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid #ccc;border-radius:6px;background:#fff}
+  .gate input:focus{outline:none;border-color:#1a1a1a}
+  .gate button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-radius:6px;background:#1a1a1a;color:#fff;cursor:pointer}
+  .gate button:disabled{opacity:.5;cursor:default}
+  .err{color:#b00020;font-size:13px;height:18px;margin-top:12px}
+</style></head>
 <body>
-    <nav>
-        <a href="index.html">Devesh Kodnani</a>
-        <div class="nav-links">
-            <a href="https://blog.deveshkodnani.com">Blog</a>
-            <a href="research.html">Research</a>
-            <a href="cv.html">CV</a>
-        </div>
-    </nav>
-
-    <main>
-        <h2 class="page-title">CV</h2>
-
-        <div class="cv-section">
-            <h2>Education</h2>
-            <div class="cv-entry">
-                <div class="title">Massachusetts Institute of Technology</div>
-                <div class="detail">Ph.D. in Management (Economics Track), MIT Sloan</div>
-                <div class="year">2025 – present</div>
-            </div>
-            <div class="cv-entry">
-                <div class="title">University of Chicago</div>
-                <div class="detail">B.A. in Economics (Honors) and Political Science (Honors)</div>
-                <div class="year">2018 – 2022</div>
-            </div>
-        </div>
-
-        <div class="cv-section">
-            <h2>Research &amp; Policy</h2>
-            <div class="cv-entry">
-                <div class="title">Advisor to Senior House Democrat, U.S. Joint Economic Committee</div>
-                <div class="year">2025 – present</div>
-            </div>
-            <div class="cv-entry">
-                <div class="title">Research Fellow, Institute for Work and Employment Research, MIT</div>
-                <div class="year">2025 – present</div>
-            </div>
-            <div class="cv-entry">
-                <div class="title">Economist, Global Economics Research, Goldman Sachs</div>
-                <div class="year">2022 – 2024</div>
-            </div>
-            <div class="cv-entry">
-                <div class="title">Research Assistant to Prof. John List, University of Chicago Department of Economics</div>
-                <div class="year">2021 – 2022</div>
-            </div>
-        </div>
-
-        <div class="cv-section">
-            <h2>Selected Press</h2>
-            <div class="cv-entry">
-                <div class="detail">Research covered in the New York Times, Wall Street Journal, Financial Times, CNN, Bloomberg, The Atlantic, Politico, BBC</div>
-            </div>
-        </div>
-
-        <div class="cv-section">
-            <h2>Awards &amp; Honors</h2>
-            <div class="cv-entry">
-                <div class="detail">Most-Read Goldman Sachs Research Report, 2023 &amp; 2024</div>
-            </div>
-            <div class="cv-entry">
-                <div class="detail">#1-Ranked College Debate Team in the U.S. (American Parliamentary Debate Association), 2022</div>
-            </div>
-            <div class="cv-entry">
-                <div class="detail">#1-Ranked College Debater in North America (North American Debating Championship), 2022</div>
-            </div>
-            <div class="cv-entry">
-                <div class="detail">High School National Debate Champion (National Speech and Debate Association), 2018</div>
-            </div>
-        </div>
-    </main>
-</body>
-</html>
+  <div class="gate">
+    <h1>CV — Devesh Kodnani</h1>
+    <p>This preview is password-protected. Enter the password to continue.</p>
+    <form id="f">
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Password" autofocus>
+      <button id="btn" type="submit">Unlock</button>
+    </form>
+    <div class="err" id="err"></div>
+  </div>
+<script>
+const SALT="t9eIKMd+bLVSB73O6leuTQ==", IV="ZKLQTpxm5dexCENS", CT="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", ITER=200000;
+const bytes=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const f=document.getElementById('f'), pwEl=document.getElementById('pw'),
+      btn=document.getElementById('btn'), err=document.getElementById('err');
+async function unlock(pw){
+  const base=await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2', salt:bytes(SALT), iterations:ITER, hash:'SHA-256'},
+              base, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM', iv:bytes(IV)}, key, bytes(CT));
+  try{ sessionStorage.setItem('gate:'+location.pathname, pw); }catch(_){}
+  const html=new TextDecoder().decode(pt);
+  document.open(); document.write(html); document.close();
+}
+f.addEventListener('submit', async e=>{
+  e.preventDefault(); err.textContent=''; btn.disabled=true; btn.textContent='Unlocking…';
+  try{ await unlock(pwEl.value); }
+  catch(_){ err.textContent='Incorrect password.'; btn.disabled=false; btn.textContent='Unlock'; pwEl.select(); }
+});
+// Remember the password for this tab so reloads (e.g. after an update) skip the gate.
+try{ const pw=sessionStorage.getItem('gate:'+location.pathname); if(pw) unlock(pw).catch(()=>{}); }catch(_){}
+</script></body></html>

@@ -1,91 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Research — Devesh Kodnani</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Research — Devesh Kodnani</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;font-family:Lora,Georgia,serif;background:#faf9f7;color:#1a1a1a;
+       display:flex;align-items:center;justify-content:center}
+  .gate{width:min(92vw,420px);text-align:center;padding:36px 30px}
+  .gate h1{font-size:24px;font-weight:500;margin:0 0 6px}
+  .gate p{color:#555;font-size:14px;line-height:1.5;margin:0 0 22px}
+  .gate form{display:flex;gap:8px;justify-content:center}
+  .gate input{flex:1;font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid #ccc;border-radius:6px;background:#fff}
+  .gate input:focus{outline:none;border-color:#1a1a1a}
+  .gate button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-radius:6px;background:#1a1a1a;color:#fff;cursor:pointer}
+  .gate button:disabled{opacity:.5;cursor:default}
+  .err{color:#b00020;font-size:13px;height:18px;margin-top:12px}
+</style></head>
 <body>
-    <nav>
-        <a href="index.html">Devesh Kodnani</a>
-        <div class="nav-links">
-            <a href="https://blog.deveshkodnani.com">Blog</a>
-            <a href="research.html">Research</a>
-            <a href="cv.html">CV</a>
-        </div>
-    </nav>
-
-    <main>
-        <h2 class="page-title">Select Research</h2>
-
-        <h3 class="section-label">AI Economics</h3>
-
-        <div class="paper">
-            <h3>"The AI Transition One Year Later"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, April 2024</div>
-        </div>
-
-        <div class="paper">
-            <h3>"Upgrading Our Global Growth Forecasts to Reflect the Impact of AI"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, October 2023</div>
-        </div>
-
-        <div class="paper">
-            <h3>"The Magnitude and Timing of the AI Investment Cycle"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, July 2023</div>
-        </div>
-
-        <div class="paper">
-            <h3>"The Potentially Large Effects of Artificial Intelligence on Economic Growth"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, March 2023</div>
-            <div class="venue">Most-read Goldman Sachs Research report of 2023 and 2024</div>
-        </div>
-
-        <h3 class="section-label">Macro &amp; Trade</h3>
-
-        <div class="paper">
-            <h3>"The Global Impact of Higher US Tariffs"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, August 2024</div>
-        </div>
-
-        <div class="paper">
-            <h3>"The Economic Potential of Accelerated Healthcare Innovation"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, March 2024</div>
-        </div>
-
-        <div class="paper">
-            <h3>"Why Is DM Immigration So Elevated?"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, December 2023</div>
-        </div>
-
-        <div class="paper">
-            <h3>"Macro Outlook 2024: The Hard Part Is Over"</h3>
-            <div class="authors">with J. Hatzius, D. Wilson, J. Briggs, V. Chang, G. Pierdomenico — Goldman Sachs, November 2023</div>
-        </div>
-
-        <div class="paper">
-            <h3>"Historical Evidence on Central Bank Cuts After G10 Soft Landings"</h3>
-            <div class="authors">Goldman Sachs, August 2023</div>
-        </div>
-
-        <div class="paper">
-            <h3>"The Economic Impacts of Bank Stress in the US and Europe"</h3>
-            <div class="authors">with J. Briggs — Goldman Sachs, March 2023</div>
-        </div>
-
-        <div class="paper">
-            <h3>"Macro Outlook 2023: This Cycle Is Different"</h3>
-            <div class="authors">with J. Hatzius, D. Struyven, Y. Zhestkova — Goldman Sachs, November 2022</div>
-        </div>
-
-        <div class="paper">
-            <h3>"Can G10 Economies Tame Inflation Without a Recession?"</h3>
-            <div class="authors">with D. Struyven — Goldman Sachs, October 2022</div>
-        </div>
-    </main>
-</body>
-</html>
+  <div class="gate">
+    <h1>Research — Devesh Kodnani</h1>
+    <p>This preview is password-protected. Enter the password to continue.</p>
+    <form id="f">
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Password" autofocus>
+      <button id="btn" type="submit">Unlock</button>
+    </form>
+    <div class="err" id="err"></div>
+  </div>
+<script>
+const SALT="02XPom72yHgndO/oNZGcwQ==", IV="Upol7UuNWJdO2sLm", CT="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", ITER=200000;
+const bytes=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const f=document.getElementById('f'), pwEl=document.getElementById('pw'),
+      btn=document.getElementById('btn'), err=document.getElementById('err');
+async function unlock(pw){
+  const base=await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2', salt:bytes(SALT), iterations:ITER, hash:'SHA-256'},
+              base, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM', iv:bytes(IV)}, key, bytes(CT));
+  try{ sessionStorage.setItem('gate:'+location.pathname, pw); }catch(_){}
+  const html=new TextDecoder().decode(pt);
+  document.open(); document.write(html); document.close();
+}
+f.addEventListener('submit', async e=>{
+  e.preventDefault(); err.textContent=''; btn.disabled=true; btn.textContent='Unlocking…';
+  try{ await unlock(pwEl.value); }
+  catch(_){ err.textContent='Incorrect password.'; btn.disabled=false; btn.textContent='Unlock'; pwEl.select(); }
+});
+// Remember the password for this tab so reloads (e.g. after an update) skip the gate.
+try{ const pw=sessionStorage.getItem('gate:'+location.pathname); if(pw) unlock(pw).catch(()=>{}); }catch(_){}
+</script></body></html>
