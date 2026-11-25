@@ -433,23 +433,60 @@ function render(opts = {}) {
 
 // ---- PNG export: redraw at a fixed width in the light theme, inline the computed
 // styles, wrap with title / definition / legend / attribution, rasterize at 2x.
-let fontCSS = null;
-async function embeddedLato() {
-  if (fontCSS !== null) return fontCSS;
-  fontCSS = "";
-  try {
-    const css = await (await fetch("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap")).text();
-    const faces = css.split("/* ").filter(b => b.startsWith("latin */"));
-    for (const face of faces) {
-      const url = (face.match(/url\((https:[^)]+)\)/) || [])[1], wt = (face.match(/font-weight:\s*(\d+)/) || [])[1];
-      if (!url) continue;
-      const blob = await (await fetch(url)).blob();
-      const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
-      fontCSS += `@font-face{font-family:Lato;font-weight:${wt};src:url(${data}) format("woff2");}`;
-    }
-  } catch (_) { fontCSS = ""; }
+let fontCSS = null;  // promise for the @font-face CSS with Lato inlined as data URIs
+function embeddedLato() {
+  if (fontCSS) return fontCSS;
+  fontCSS = (async () => {
+    let out = "";
+    try {
+      const css = await (await fetch("https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap")).text();
+      const faces = css.split("/* ").filter(b => b.startsWith("latin */"));
+      for (const face of faces) {
+        const url = (face.match(/url\((https:[^)]+)\)/) || [])[1], wt = (face.match(/font-weight:\s*(\d+)/) || [])[1];
+        if (!url) continue;
+        const blob = await (await fetch(url)).blob();
+        const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+        out += `@font-face{font-family:Lato;font-weight:${wt};src:url(${data}) format("woff2");}`;
+      }
+    } catch (_) { out = ""; }
+    return out;
+  })();
   return fontCSS;
 }
+
+// Browsers fire an SVG image's load event before its embedded @font-face fonts are ready,
+// and text in a not-yet-ready font is drawn invisibly. So: draw, check that the title band
+// has ink, and redraw from a fresh image until it does (or ~4 s pass).
+function loadSVG(svgText) {
+  return new Promise((res, rej) => { const img = new Image(); img.onload = () => res(img); img.onerror = rej;
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText); });
+}
+
+function titleDrawn(ctx, OUTW, scale, PAD) {
+  const d = ctx.getImageData(PAD * scale, PAD * scale, (OUTW - 2 * PAD) * scale, 28 * scale).data;
+  for (let i = 0; i < d.length; i += 4) if (d[i] < 160 && d[i + 3] > 0) return true;
+  return false;
+}
+
+async function rasterize(ctx, svgText, OUTW, OUTH, scale, PAD) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const img = await loadSVG(svgText);
+    if (img.decode) await img.decode().catch(() => {});
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0); ctx.drawImage(img, 0, 0);
+    if (titleDrawn(ctx, OUTW, scale, PAD)) return;
+    await new Promise(r => setTimeout(r, 200));
+  }
+}
+
+// Fetch and decode the export font in the background so the first click doesn't wait on it.
+// (A timer rather than the load event: the password gate swaps the page in with document.write.)
+setTimeout(async () => {
+  const css = await embeddedLato();
+  if (css) loadSVG(`<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><style>${css}</style>` +
+    `<text y="9" font-family="Lato" font-size="9">a</text><text y="9" font-family="Lato" font-weight="700" font-size="9">a</text></svg>`)
+    .catch(() => {});
+}, 800);
 
 function textWidth(text, size, weight = 400) {
   const ctx = document.createElement("canvas").getContext("2d");
@@ -498,6 +535,7 @@ async function downloadPNG() {
     render();
   }
 
+  if (document.fonts) await document.fonts.ready;  // line-wrap measurements need Lato loaded
   const S = current.S, month = D.latest;
   const title = $("title").textContent;
   const def = "Note: " + D.pngNote[state.wt] + (D.pngNoteExtra ? " " + D.pngNoteExtra : "") + (state.rec ? " " + REC_NOTE : "");
@@ -536,12 +574,10 @@ async function downloadPNG() {
     new XMLSerializer().serializeToString(clone) + `</svg>`;
 
   try {
-    const img = new Image();
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej;
-      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText); });
     const scale = 2, cv = document.createElement("canvas");
     cv.width = OUTW * scale; cv.height = OUTH * scale;
-    const ctx = cv.getContext("2d"); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
+    const ctx = cv.getContext("2d");
+    await rasterize(ctx, svgText, OUTW, OUTH, scale, PAD);
     const blob = await new Promise(r => cv.toBlob(r, "image/png"));
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     const wname = { u: "categories", w: "spending", b: "both" }[state.wt];
